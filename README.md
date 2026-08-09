@@ -46,6 +46,8 @@ It is designed to validate the experiment loop before and alongside heavier natu
 
 The natural-image MVP is now set up as a Colab/GPU path rather than a local-CPU path.
 
+There is now also a Kaggle GPU path for fresh-session reproducibility on Tesla P100 runtimes.
+
 Current repo support:
 
 - COCO subset dataset adapter
@@ -62,13 +64,22 @@ Recommended workflow:
 4. Run the natural-image config on GPU.
 5. Copy outputs back to Google Drive or download them.
 
+For Kaggle:
+
+1. Open [notebooks/visual_memory_codec_kaggle.ipynb](/Users/peiyan1/Desktop/ai_agent_memory/notebooks/visual_memory_codec_kaggle.ipynb).
+2. Add `GITHUB_TOKEN` in Kaggle Secrets.
+3. Use a GPU runtime.
+4. Run all cells. The notebook reinstalls a P100-compatible PyTorch build from scratch, validates real CUDA execution, runs only `configs/natural_coco_smoke.json`, and zips the outputs for download.
+
 ## Repository layout
 
 - [docs/architecture.md](/Users/peiyan1/Desktop/ai_agent_memory/docs/architecture.md)
 - [configs/synthetic_baseline.json](/Users/peiyan1/Desktop/ai_agent_memory/configs/synthetic_baseline.json)
 - [configs/natural_coco_mvp.json](/Users/peiyan1/Desktop/ai_agent_memory/configs/natural_coco_mvp.json)
 - [requirements-colab.txt](/Users/peiyan1/Desktop/ai_agent_memory/requirements-colab.txt)
+- [requirements-kaggle.txt](/Users/peiyan1/Desktop/ai_agent_memory/requirements-kaggle.txt)
 - [notebooks/visual_memory_codec_colab.ipynb](/Users/peiyan1/Desktop/ai_agent_memory/notebooks/visual_memory_codec_colab.ipynb)
+- [notebooks/visual_memory_codec_kaggle.ipynb](/Users/peiyan1/Desktop/ai_agent_memory/notebooks/visual_memory_codec_kaggle.ipynb)
 - [src/visual_memory_benchmark](/Users/peiyan1/Desktop/ai_agent_memory/src/visual_memory_benchmark)
 
 ## Quickstart
