@@ -216,16 +216,32 @@ class SemanticImageSimilarity:
         inputs = processor(images=[_pil_to_uint8(image_a), _pil_to_uint8(image_b)], return_tensors="pt")
         inputs = {k: v.to(_device()) for k, v in inputs.items()}
         with torch.no_grad():
-            if hasattr(model, "get_image_features"):
-                features = model.get_image_features(**inputs)
-            else:
-                outputs = model(**inputs)
-                if hasattr(outputs, "image_embeds") and outputs.image_embeds is not None:
-                    features = outputs.image_embeds
-                else:
-                    features = outputs.last_hidden_state[:, 0]
+            features = _extract_semantic_image_features(model, inputs)
             features = features / features.norm(dim=-1, keepdim=True)
         return float((features[0] * features[1]).sum().detach().cpu().item())
+
+
+def _extract_semantic_image_features(model, inputs):
+    import torch
+
+    if hasattr(model, "get_image_features"):
+        features = model.get_image_features(**inputs)
+        if isinstance(features, torch.Tensor):
+            return features
+        if hasattr(features, "image_embeds") and isinstance(features.image_embeds, torch.Tensor):
+            return features.image_embeds
+        if hasattr(features, "pooler_output") and isinstance(features.pooler_output, torch.Tensor):
+            return features.pooler_output
+        if hasattr(features, "last_hidden_state") and isinstance(features.last_hidden_state, torch.Tensor):
+            return features.last_hidden_state[:, 0]
+        raise TypeError(f"Unsupported get_image_features() return type: {type(features)!r}")
+
+    outputs = model(**inputs)
+    if hasattr(outputs, "image_embeds") and isinstance(outputs.image_embeds, torch.Tensor):
+        return outputs.image_embeds
+    if hasattr(outputs, "last_hidden_state") and isinstance(outputs.last_hidden_state, torch.Tensor):
+        return outputs.last_hidden_state[:, 0]
+    raise TypeError(f"Unsupported semantic model output type: {type(outputs)!r}")
 
 
 @lru_cache(maxsize=1)
