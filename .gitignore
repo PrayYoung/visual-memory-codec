@@ -24,12 +24,12 @@ env/
 secrets*.json
 
 # Data, models, outputs
-data/
-outputs/
-artifacts/
-checkpoints/
-models/
-hf_cache/
+/data/
+/outputs/
+/artifacts/
+/checkpoints/
+/models/
+/hf_cache/
 
 # Notebook artifacts
 .ipynb_checkpoints/
@@ -37,4 +37,3 @@ hf_cache/
 # Colab / runtime caches
 tmp/
 tmpdir/
-
