@@ -1,0 +1,38 @@
+{
+  "run_name": "synthetic_baseline",
+  "output_dir": "outputs",
+  "dataset": {
+    "type": "synthetic_shapes",
+    "num_samples": 80,
+    "image_size": 256,
+    "min_objects": 3,
+    "max_objects": 6,
+    "seed": 7
+  },
+  "budgets_bytes": [256, 512, 1024, 2048, 5120, 10240],
+  "methods": [
+    {
+      "name": "text_only",
+      "kind": "text_only",
+      "params": {
+        "max_objects_in_caption": 8
+      }
+    },
+    {
+      "name": "visual_latent_only",
+      "kind": "visual_latent_only",
+      "params": {
+        "max_grid_size": 32
+      }
+    },
+    {
+      "name": "hybrid",
+      "kind": "hybrid",
+      "params": {
+        "text_fraction": 0.45,
+        "max_objects_in_caption": 6,
+        "max_grid_size": 24
+      }
+    }
+  ]
+}

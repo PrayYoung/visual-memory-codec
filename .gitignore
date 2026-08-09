@@ -1,0 +1,40 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.venv/
+venv/
+env/
+
+# Local env / secrets
+.env
+.env.*
+*.pem
+*.key
+secrets*.json
+
+# Data, models, outputs
+data/
+outputs/
+artifacts/
+checkpoints/
+models/
+hf_cache/
+
+# Notebook artifacts
+.ipynb_checkpoints/
+
+# Colab / runtime caches
+tmp/
+tmpdir/
+

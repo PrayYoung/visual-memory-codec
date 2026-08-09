@@ -1,0 +1,1 @@
+"""Visual memory benchmark prototype."""

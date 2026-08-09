@@ -1,0 +1,42 @@
+{
+  "run_name": "natural_coco_smoke",
+  "output_dir": "outputs",
+  "dataset": {
+    "type": "coco_subset",
+    "images_dir": "data/coco/val2017",
+    "annotations_path": "data/coco/annotations/instances_val2017_subset.json",
+    "image_size": 256,
+    "num_samples": 6,
+    "min_annotations": 2,
+    "require_multiple_categories": true
+  },
+  "budgets_bytes": [2048, 8192],
+  "methods": [
+    {
+      "name": "text_only_real",
+      "kind": "text_only_real",
+      "params": {
+        "caption_model_name": "Salesforce/blip-image-captioning-base",
+        "generator_model_name": "stabilityai/sd-turbo",
+        "num_inference_steps": 2,
+        "guidance_scale": 0.0
+      }
+    },
+    {
+      "name": "visual_latent_real",
+      "kind": "visual_latent_real",
+      "params": {
+        "vae_model_name": "stabilityai/sd-vae-ft-mse",
+        "min_spatial_size": 4
+      }
+    }
+  ],
+  "evaluation": {
+    "type": "coco_annotation_qa",
+    "semantic_model_name": "google/siglip-base-patch16-224",
+    "dino_model_name": "facebook/dinov2-base",
+    "detector_model_name": "facebook/detr-resnet-50",
+    "detector_threshold": 0.7,
+    "max_questions": 4
+  }
+}
