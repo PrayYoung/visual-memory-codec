@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import re
+
 from visual_memory_benchmark.codecs.base import BaseCodec
 from visual_memory_benchmark.models.hf_adapters import BlipCaptioner, SdTurboGenerator
 from visual_memory_benchmark.types import EncodedArtifact, SceneSample
@@ -26,29 +29,24 @@ class RealTextCodec(BaseCodec):
         )
         self.max_new_tokens = max_new_tokens
         self.prompt_prefix = prompt_prefix
-        self._caption_cache: dict[str, str] = {}
+        self._segment_cache: dict[str, list[str]] = {}
 
     def encode(self, sample: SceneSample, budget_bytes: int) -> EncodedArtifact:
-        full_caption = self._caption_cache.get(sample.sample_id)
-        if full_caption is None:
-            prompts = [
-                None,
-                "a detailed description of",
-                "the scene contains",
-            ]
-            parts = []
-            for prompt in prompts:
-                text = self.captioner.caption(sample.image, prompt=prompt, max_new_tokens=self.max_new_tokens)
-                if text and text not in parts:
-                    parts.append(text)
-            full_caption = ". ".join(parts)
-            self._caption_cache[sample.sample_id] = full_caption
+        segments = self._segment_cache.get(sample.sample_id)
+        if segments is None:
+            segments = self._generate_segments(sample)
+            self._segment_cache[sample.sample_id] = segments
 
-        budgeted = _budget_text(full_caption, budget_bytes)
+        budgeted = _pack_segments_for_budget(segments, budget_bytes)
+        payload = budgeted.encode("utf-8")
         return EncodedArtifact(
             method_name=self.method_name,
-            payload=budgeted.encode("utf-8"),
-            aux={"text": budgeted},
+            payload=payload,
+            aux={
+                "text": budgeted,
+                "text_sha1": hashlib.sha1(payload).hexdigest(),
+                "segment_count": len([item for item in budgeted.split(". ") if item.strip()]),
+            },
         )
 
     def decode(self, artifact: EncodedArtifact):
@@ -60,26 +58,91 @@ class RealTextCodec(BaseCodec):
         seed = abs(hash(prompt)) % (2**31)
         return self.generator.generate(prompt, image_size=self.image_size, seed=seed)
 
+    def _generate_segments(self, sample: SceneSample) -> list[str]:
+        prompt_specs = [
+            {
+                "prompt": None,
+                "max_new_tokens": min(self.max_new_tokens, 48),
+            },
+            {
+                "prompt": "a concise factual description of",
+                "max_new_tokens": min(self.max_new_tokens, 64),
+            },
+            {
+                "prompt": "a detailed description of the main objects, people, animals, and actions in",
+                "max_new_tokens": max(self.max_new_tokens, 96),
+            },
+            {
+                "prompt": "describe the colors, clothing, appearance, and notable attributes in",
+                "max_new_tokens": max(self.max_new_tokens, 96),
+            },
+            {
+                "prompt": "describe the spatial layout, positions, foreground, background, and scene context in",
+                "max_new_tokens": max(self.max_new_tokens, 112),
+            },
+            {
+                "prompt": "describe secondary objects, background details, surroundings, and any visible relationships in",
+                "max_new_tokens": max(self.max_new_tokens, 128),
+            },
+        ]
 
-def _budget_text(text: str, budget_bytes: int) -> str:
-    if len(text.encode("utf-8")) <= budget_bytes:
-        return text
-    sentences = [segment.strip() for segment in text.split(".") if segment.strip()]
-    kept: list[str] = []
-    for sentence in sentences:
-        candidate = ". ".join(kept + [sentence])
+        segments: list[str] = []
+        seen_keys: set[str] = set()
+        for spec in prompt_specs:
+            text = self.captioner.caption(
+                sample.image,
+                prompt=spec["prompt"],
+                max_new_tokens=spec["max_new_tokens"],
+            )
+            for segment in _split_into_segments(text):
+                key = _normalize_key(segment)
+                if key and key not in seen_keys:
+                    seen_keys.add(key)
+                    segments.append(segment)
+        return segments
+
+
+def _pack_segments_for_budget(segments: list[str], budget_bytes: int) -> str:
+    if budget_bytes <= 0:
+        return ""
+
+    selected: list[str] = []
+    for segment in segments:
+        candidate = _join_segments(selected + [segment])
         if len(candidate.encode("utf-8")) <= budget_bytes:
-            kept.append(sentence)
+            selected.append(segment)
         else:
+            if not selected:
+                return _truncate_text_preserving_words(segment, budget_bytes)
             break
-    if kept:
-        return ". ".join(kept)
+    return _join_segments(selected)
+
+
+def _join_segments(segments: list[str]) -> str:
+    return ". ".join(segment.rstrip(". ") for segment in segments if segment.strip())
+
+
+def _split_into_segments(text: str) -> list[str]:
+    raw_parts = re.split(r"[.;]\s+|\n+", text.strip())
+    segments: list[str] = []
+    for part in raw_parts:
+        cleaned = re.sub(r"\s+", " ", part).strip(" ,.;:-")
+        if len(cleaned) >= 8:
+            segments.append(cleaned)
+    return segments
+
+
+def _normalize_key(text: str) -> str:
+    return re.sub(r"[^a-z0-9 ]+", "", text.lower()).strip()
+
+
+def _truncate_text_preserving_words(text: str, budget_bytes: int) -> str:
     words = text.split()
-    out: list[str] = []
+    kept: list[str] = []
     for word in words:
-        candidate = " ".join(out + [word])
+        candidate = " ".join(kept + [word])
         if len(candidate.encode("utf-8")) <= budget_bytes:
-            out.append(word)
+            kept.append(word)
         else:
             break
-    return " ".join(out)
+    return " ".join(kept)

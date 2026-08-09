@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+import hashlib
 from pathlib import Path
 from time import perf_counter
 
@@ -149,6 +150,7 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
     qa_dir = ensure_dir(run_dir / "qa")
     artifact_dir = ensure_dir(run_dir / "artifacts")
     original_dir = ensure_dir(run_dir / "originals")
+    diagnostics_dir = ensure_dir(run_dir / "diagnostics")
 
     dataset = build_dataset(config)
     samples = dataset.iter_samples()
@@ -174,6 +176,7 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
     per_scene_rows: list[dict] = []
     aggregate_buckets: dict[tuple[str, int], list[dict]] = defaultdict(list)
     comparison_rows: dict[tuple[str, int], dict] = {}
+    payload_diagnostics: list[dict] = []
 
     for method in config.methods:
         codec = build_codec(method, image_size)
@@ -207,6 +210,8 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                 artifact_path = method_artifact_dir / f"{sample.sample_id}.bin"
                 reconstruction.save(recon_path)
                 artifact_path.write_bytes(artifact.payload)
+                if "text" in artifact.aux:
+                    (method_artifact_dir / f"{sample.sample_id}.txt").write_text(artifact.aux["text"])
 
                 qa_score, qa_answers = answer_coco_qa(reconstruction, frozen_qa[sample.sample_id], detector)
                 qa_predictions.append({"sample_id": sample.sample_id, "answers": qa_answers})
@@ -227,6 +232,21 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                     "decode_seconds": decode_seconds,
                     "status": "ok",
                 }
+                if "text" in artifact.aux:
+                    row["stored_text"] = artifact.aux["text"]
+                    row["payload_sha1"] = artifact.aux.get("text_sha1", hashlib.sha1(artifact.payload).hexdigest())
+                    row["segment_count"] = artifact.aux.get("segment_count", 0)
+                    payload_diagnostics.append(
+                        {
+                            "sample_id": sample.sample_id,
+                            "method_name": method.name,
+                            "budget_bytes": budget_bytes,
+                            "stored_bytes": artifact.stored_bytes,
+                            "budget_utilization": artifact.stored_bytes / budget_bytes,
+                            "payload_sha1": row["payload_sha1"],
+                            "stored_text": artifact.aux["text"],
+                        }
+                    )
                 per_scene_rows.append(row)
                 aggregate_buckets[(method.name, budget_bytes)].append(row)
 
@@ -276,10 +296,40 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
         row for _, row in sorted(comparison_rows.items()) if "text_only_real" in row and "visual_latent_real" in row
     ]
 
+    identical_payloads: list[dict] = []
+    rows_by_sample_method: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in per_scene_rows:
+        if row.get("status") == "ok" and row.get("payload_sha1"):
+            rows_by_sample_method[(row["sample_id"], row["method_name"])].append(row)
+    for (sample_id, method_name), rows in sorted(rows_by_sample_method.items()):
+        rows = sorted(rows, key=lambda item: int(item["budget_bytes"]))
+        for prev, curr in zip(rows, rows[1:]):
+            if prev.get("payload_sha1") == curr.get("payload_sha1"):
+                identical_payloads.append(
+                    {
+                        "sample_id": sample_id,
+                        "method_name": method_name,
+                        "budget_a": prev["budget_bytes"],
+                        "budget_b": curr["budget_bytes"],
+                        "stored_bytes": curr["stored_bytes"],
+                        "payload_sha1": curr["payload_sha1"],
+                    }
+                )
+
+    example_text_payloads = payload_diagnostics[: min(8, len(payload_diagnostics))]
+
     write_csv(run_dir / "per_scene_metrics.csv", per_scene_rows)
     write_csv(run_dir / "aggregate_metrics.csv", aggregate_rows)
     plot_pareto(aggregate_rows, run_dir / "pareto_curves.png")
     write_comparison_html(comparison_list, run_dir / "comparison.html")
+    write_json(diagnostics_dir / "text_payload_diagnostics.json", payload_diagnostics)
+    write_json(
+        run_dir / "run_summary.json",
+        {
+            "identical_payloads_across_budgets": identical_payloads,
+            "example_text_payloads": example_text_payloads,
+        },
+    )
 
 
 def main() -> None:
