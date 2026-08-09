@@ -16,7 +16,7 @@
       "name": "text_only_real",
       "kind": "text_only_real",
       "params": {
-        "caption_model_name": "Salesforce/blip-image-captioning-base",
+        "vlm_model_name": "Qwen/Qwen2.5-VL-3B-Instruct",
         "generator_model_name": "stabilityai/sd-turbo",
         "num_inference_steps": 2,
         "guidance_scale": 0.0

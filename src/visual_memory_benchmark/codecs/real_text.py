@@ -4,7 +4,7 @@ import hashlib
 import re
 
 from visual_memory_benchmark.codecs.base import BaseCodec
-from visual_memory_benchmark.models.hf_adapters import BlipCaptioner, SdTurboGenerator
+from visual_memory_benchmark.models.hf_adapters import Qwen25VlFactExtractor, SdTurboGenerator
 from visual_memory_benchmark.types import EncodedArtifact, SceneSample
 
 PROMPT_ECHO_PATTERNS = [
@@ -24,15 +24,15 @@ class RealTextCodec(BaseCodec):
         self,
         method_name: str,
         image_size: int,
-        caption_model_name: str = "Salesforce/blip-image-captioning-base",
+        vlm_model_name: str = "Qwen/Qwen2.5-VL-3B-Instruct",
         generator_model_name: str = "stabilityai/sd-turbo",
-        max_new_tokens: int = 96,
+        max_new_tokens: int = 192,
         num_inference_steps: int = 2,
         guidance_scale: float = 0.0,
         prompt_prefix: str = "A factual scene description:",
     ) -> None:
         super().__init__(method_name=method_name, image_size=image_size)
-        self.captioner = BlipCaptioner(model_name=caption_model_name)
+        self.extractor = Qwen25VlFactExtractor(model_name=vlm_model_name)
         self.generator = SdTurboGenerator(
             model_name=generator_model_name,
             num_inference_steps=num_inference_steps,
@@ -75,37 +75,44 @@ class RealTextCodec(BaseCodec):
 
     def _generate_factual_units(self, sample: SceneSample) -> list[dict[str, str | int]]:
         prompt_specs = [
-            (1, None, 32),
-            (1, "a photo of", 32),
-            (1, "the main subject is", 24),
-            (1, "the main action is", 24),
-            (2, "there are", 32),
-            (2, "the image includes", 32),
-            (2, "visible colors include", 24),
-            (2, "on the left side", 24),
-            (2, "on the right side", 24),
-            (2, "in the foreground", 24),
-            (2, "in the background", 24),
-            (2, "next to", 24),
-            (3, "behind", 20),
-            (3, "in front of", 20),
-            (3, "the person is", 24),
-            (3, "the animal is", 24),
-            (3, "the object looks", 24),
-            (3, "the surroundings include", 28),
-            (3, "another visible detail is", 24),
-            (3, "the layout is", 24),
-            (3, "nearby there is", 24),
-            (3, "also visible is", 24),
+            (
+                1,
+                (
+                    "List 4 short factual bullet points grounded in the image. "
+                    "Focus only on the overall scene, the primary subjects, and the main action. "
+                    "Use one bullet per fact. Do not include instructions or explanations."
+                ),
+                128,
+            ),
+            (
+                2,
+                (
+                    "List up to 8 additional factual bullet points grounded in the image. "
+                    "Focus on visible object counts, major colors, attributes, secondary objects, "
+                    "and major left/right or foreground/background relationships. "
+                    "Use one bullet per fact. Avoid repeating earlier facts."
+                ),
+                192,
+            ),
+            (
+                3,
+                (
+                    "List up to 12 additional factual bullet points grounded in the image. "
+                    "Focus on finer layout, pose or orientation, background objects, "
+                    "relative spatial relations, and other visually verifiable details. "
+                    "Use one bullet per fact. Avoid repeating earlier facts or adding guesses."
+                ),
+                256,
+            ),
         ]
 
         units: list[dict[str, str | int]] = []
         seen: set[str] = set()
         for level, prompt, tokens in prompt_specs:
-            generated = self.captioner.caption(
-                sample.image,
+            generated = self.extractor.analyze_image(
+                sample.source_path or "",
                 prompt=prompt,
-                max_new_tokens=min(max(tokens, 16), self.max_new_tokens),
+                max_new_tokens=min(tokens, self.max_new_tokens),
             )
             cleaned_units = _extract_grounded_units(generated, prompt=prompt, level=level)
             for unit in cleaned_units:
@@ -124,7 +131,7 @@ def _extract_grounded_units(text: str, prompt: str | None, level: int) -> list[d
         if cleaned_norm.startswith(prompt_norm):
             cleaned = cleaned[len(prompt) :].strip(" ,.:;-")
 
-    segments = re.split(r"[.;]\s+|\n+|,\s+(?=[a-z])", cleaned)
+    segments = re.split(r"\n+|(?:^|\s)[-*•]\s+|\s+\d+\.\s+|[.;]\s+", cleaned)
     units: list[dict[str, str | int]] = []
     for segment in segments:
         fact = _sanitize_fact(segment)
@@ -149,6 +156,8 @@ def _sanitize_fact(text: str) -> str:
     }:
         return ""
     if re.fullmatch(r"(stuffed[, ]*){3,}.*", lowered):
+        return ""
+    if lowered.startswith("there is no") or lowered.startswith("not visible"):
         return ""
     return fact
 

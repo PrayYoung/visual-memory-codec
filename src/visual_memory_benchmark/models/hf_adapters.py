@@ -55,6 +55,64 @@ class BlipCaptioner:
 
 
 @lru_cache(maxsize=1)
+def _load_qwen25_vl(model_name: str):
+    import torch
+    from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
+
+    dtype = torch.float16 if _device() != "cpu" else torch.float32
+    processor = AutoProcessor.from_pretrained(
+        model_name,
+        min_pixels=256 * 28 * 28,
+        max_pixels=768 * 28 * 28,
+    )
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        model_name,
+        torch_dtype=dtype,
+        attn_implementation="sdpa",
+    )
+    model.to(_device())
+    model.eval()
+    return processor, model
+
+
+class Qwen25VlFactExtractor:
+    def __init__(self, model_name: str = "Qwen/Qwen2.5-VL-3B-Instruct") -> None:
+        self.model_name = model_name
+
+    def analyze_image(self, image_path: str, prompt: str, max_new_tokens: int = 192) -> str:
+        import torch
+
+        processor, model = _load_qwen25_vl(self.model_name)
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": f"file://{image_path}"},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+        inputs = processor.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True,
+            return_tensors="pt",
+        ).to(model.device)
+        with torch.no_grad():
+            generated_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
+        generated_ids_trimmed = [
+            out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+        ]
+        output_text = processor.batch_decode(
+            generated_ids_trimmed,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )
+        return output_text[0].strip()
+
+
+@lru_cache(maxsize=1)
 def _load_sd_turbo(model_name: str):
     import torch
     from diffusers import AutoPipelineForText2Image
