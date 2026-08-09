@@ -235,7 +235,8 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                 if "text" in artifact.aux:
                     row["stored_text"] = artifact.aux["text"]
                     row["payload_sha1"] = artifact.aux.get("text_sha1", hashlib.sha1(artifact.payload).hexdigest())
-                    row["segment_count"] = artifact.aux.get("segment_count", 0)
+                    row["statement_count"] = artifact.aux.get("statement_count", 0)
+                    row["prompt_echo_flag"] = artifact.aux.get("prompt_echo_flag", False)
                     payload_diagnostics.append(
                         {
                             "sample_id": sample.sample_id,
@@ -245,6 +246,8 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                             "budget_utilization": artifact.stored_bytes / budget_bytes,
                             "payload_sha1": row["payload_sha1"],
                             "stored_text": artifact.aux["text"],
+                            "statement_count": row["statement_count"],
+                            "prompt_echo_flag": row["prompt_echo_flag"],
                         }
                     )
                 per_scene_rows.append(row)
@@ -304,6 +307,7 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
     for (sample_id, method_name), rows in sorted(rows_by_sample_method.items()):
         rows = sorted(rows, key=lambda item: int(item["budget_bytes"]))
         for prev, curr in zip(rows, rows[1:]):
+            curr["identical_to_previous_budget"] = prev.get("payload_sha1") == curr.get("payload_sha1")
             if prev.get("payload_sha1") == curr.get("payload_sha1"):
                 identical_payloads.append(
                     {
@@ -315,6 +319,16 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                         "payload_sha1": curr["payload_sha1"],
                     }
                 )
+        if rows:
+            rows[0]["identical_to_previous_budget"] = False
+
+    for row in per_scene_rows:
+        if row.get("status") == "ok" and row.get("payload_sha1") and "identical_to_previous_budget" not in row:
+            row["identical_to_previous_budget"] = False
+        if row.get("status") == "ok" and "prompt_echo_flag" not in row:
+            row["prompt_echo_flag"] = False
+        if row.get("status") == "ok" and "statement_count" not in row:
+            row["statement_count"] = 0
 
     example_text_payloads = payload_diagnostics[: min(8, len(payload_diagnostics))]
 
