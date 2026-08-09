@@ -100,14 +100,15 @@ def _load_vae(model_name: str):
     return vae
 
 
-def _image_to_tensor(image: Image.Image, image_size: int):
+def _image_to_tensor(image: Image.Image, image_size: int, dtype=None):
     import torch
 
     image = _pil_to_uint8(image, size=image_size)
     arr = np.asarray(image).astype(np.float32) / 255.0
     arr = arr * 2.0 - 1.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0)
-    return tensor.to(_device())
+    target_dtype = dtype if dtype is not None else torch.float32
+    return tensor.to(device=_device(), dtype=target_dtype)
 
 
 def _tensor_to_image(tensor) -> Image.Image:
@@ -129,7 +130,8 @@ class SdvVaeAdapter:
         import torch
 
         vae = _load_vae(self.model_name)
-        tensor = _image_to_tensor(image, image_size=image_size)
+        vae_dtype = next(vae.parameters()).dtype
+        tensor = _image_to_tensor(image, image_size=image_size, dtype=vae_dtype)
         with torch.no_grad():
             latent_dist = vae.encode(tensor).latent_dist
             latent = latent_dist.mean * float(vae.config.scaling_factor)
@@ -140,6 +142,8 @@ class SdvVaeAdapter:
         import torch.nn.functional as F
 
         vae = _load_vae(self.model_name)
+        vae_dtype = next(vae.parameters()).dtype
+        latent = latent.to(device=_device(), dtype=vae_dtype)
         with torch.no_grad():
             decoded = vae.decode(latent / float(vae.config.scaling_factor)).sample
         return _tensor_to_image(decoded)

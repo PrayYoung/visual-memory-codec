@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TORCH_VERSION="2.3.1"
-TORCHVISION_VERSION="0.18.1"
-TORCHAUDIO_VERSION="2.3.1"
+TORCH_VERSION="2.6.0"
+TORCHVISION_VERSION="0.21.0"
+TORCHAUDIO_VERSION="2.6.0"
 TORCH_INDEX_URL="https://download.pytorch.org/whl/cu118"
 
 python3 -m pip uninstall -y torch torchvision torchaudio || true
