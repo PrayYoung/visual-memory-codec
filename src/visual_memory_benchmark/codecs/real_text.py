@@ -61,6 +61,7 @@ class RealTextCodec(BaseCodec):
                 "statement_count": len(selected_units),
                 "prompt_echo_flag": prompt_echo_flag,
                 "selected_units": selected_units,
+                "all_extracted_units": units,
             },
         )
 
@@ -74,79 +75,58 @@ class RealTextCodec(BaseCodec):
         return self.generator.generate(prompt, image_size=self.image_size, seed=seed)
 
     def _generate_factual_units(self, sample: SceneSample) -> list[dict[str, str | int]]:
-        prompt_specs = [
-            (
-                1,
-                (
-                    "List 4 short factual bullet points grounded in the image. "
-                    "Focus only on the overall scene, the primary subjects, and the main action. "
-                    "Use one bullet per fact. Do not include instructions or explanations."
-                ),
-                128,
-            ),
-            (
-                2,
-                (
-                    "List up to 8 additional factual bullet points grounded in the image. "
-                    "Focus on visible object counts, major colors, attributes, secondary objects, "
-                    "and major left/right or foreground/background relationships. "
-                    "Use one bullet per fact. Avoid repeating earlier facts."
-                ),
-                192,
-            ),
-            (
-                3,
-                (
-                    "List up to 12 additional factual bullet points grounded in the image. "
-                    "Focus on finer layout, pose or orientation, background objects, "
-                    "relative spatial relations, and other visually verifiable details. "
-                    "Use one bullet per fact. Avoid repeating earlier facts or adding guesses."
-                ),
-                256,
-            ),
-        ]
-
+        prompt = (
+            "Return grounded visual facts from this image, one fact per line, using only these tags: "
+            "[L1] for overall scene, primary subjects, and main action; "
+            "[L2] for counts, major colors or attributes, secondary objects, and major spatial relations; "
+            "[L3] for finer layout, pose or orientation, background details, and additional spatial relations. "
+            "Only output facts. No explanations, no prompt echo, no uncertainty, and no repeated facts."
+        )
+        generated = self.extractor.analyze_image(
+            sample.source_path or "",
+            prompt=prompt,
+            max_new_tokens=min(384, self.max_new_tokens * 2),
+        )
         units: list[dict[str, str | int]] = []
         seen: set[str] = set()
-        for level, prompt, tokens in prompt_specs:
-            generated = self.extractor.analyze_image(
-                sample.source_path or "",
-                prompt=prompt,
-                max_new_tokens=min(tokens, self.max_new_tokens),
-            )
-            cleaned_units = _extract_grounded_units(generated, prompt=prompt, level=level)
-            for unit in cleaned_units:
-                key = _normalize_key(unit["text"])
-                if key and key not in seen:
-                    seen.add(key)
-                    units.append(unit)
+        cleaned_units = _extract_grounded_units(generated, prompt=None, level=None)
+        for unit in cleaned_units:
+            key = _normalize_key(unit["text"])
+            if key and key not in seen:
+                seen.add(key)
+                units.append(unit)
         return units
 
 
-def _extract_grounded_units(text: str, prompt: str | None, level: int) -> list[dict[str, str | int]]:
-    cleaned = re.sub(r"\s+", " ", text).strip()
+def _extract_grounded_units(text: str, prompt: str | None, level: int | None) -> list[dict[str, str | int]]:
+    cleaned = text.strip()
     if prompt:
         prompt_norm = prompt.strip().lower()
-        cleaned_norm = cleaned.lower()
+        cleaned_norm = re.sub(r"\s+", " ", cleaned).lower()
         if cleaned_norm.startswith(prompt_norm):
             cleaned = cleaned[len(prompt) :].strip(" ,.:;-")
 
     segments = re.split(r"\n+|(?:^|\s)[-*•]\s+|\s+\d+\.\s+|[.;]\s+", cleaned)
     units: list[dict[str, str | int]] = []
     for segment in segments:
-        fact = _sanitize_fact(segment)
+        fact, parsed_level = _sanitize_fact(segment, default_level=level)
         if fact:
-            units.append({"text": fact, "level": level})
+            units.append({"text": fact, "level": parsed_level})
     return units
 
 
-def _sanitize_fact(text: str) -> str:
+def _sanitize_fact(text: str, default_level: int | None) -> tuple[str, int]:
     fact = re.sub(r"\s+", " ", text).strip(" ,.;:-")
+    level = 3 if default_level is None else default_level
+    level_match = re.match(r"^\[(L[123])\]\s*(.+)$", fact, flags=re.IGNORECASE)
+    if level_match:
+        level = int(level_match.group(1)[1])
+        fact = level_match.group(2).strip(" ,.;:-")
     if len(fact) < 8:
-        return ""
+        return "", level
     lowered = fact.lower()
     if _contains_prompt_echo(lowered):
-        return ""
+        return "", level
     if lowered in {
         "the picture",
         "the image",
@@ -154,12 +134,14 @@ def _sanitize_fact(text: str) -> str:
         "a photo",
         "a picture",
     }:
-        return ""
+        return "", level
     if re.fullmatch(r"(stuffed[, ]*){3,}.*", lowered):
-        return ""
+        return "", level
     if lowered.startswith("there is no") or lowered.startswith("not visible"):
-        return ""
-    return fact
+        return "", level
+    if lowered.startswith("l1 ") or lowered.startswith("l2 ") or lowered.startswith("l3 "):
+        return "", level
+    return fact, level
 
 
 def _pack_units_for_budget(units: list[dict[str, str | int]], budget_bytes: int) -> list[dict[str, str | int]]:

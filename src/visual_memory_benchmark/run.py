@@ -248,6 +248,8 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                             "stored_text": artifact.aux["text"],
                             "statement_count": row["statement_count"],
                             "prompt_echo_flag": row["prompt_echo_flag"],
+                            "all_extracted_units": artifact.aux.get("all_extracted_units", []),
+                            "selected_units": artifact.aux.get("selected_units", []),
                         }
                     )
                 per_scene_rows.append(row)
