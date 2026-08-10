@@ -87,7 +87,7 @@ class Qwen25VlFactExtractor:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image", "image": f"file://{image_path}"},
+                    {"type": "image", "image": image_path},
                     {"type": "text", "text": prompt},
                 ],
             }
