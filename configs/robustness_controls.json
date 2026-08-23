@@ -1,0 +1,28 @@
+{
+  "benchmark": "formal_n288",
+  "canonical_manifest_sha256": "2cd66fcc014c97c51cb07e58407f9aa43e8f124bb59224146ed8b745a407f12e",
+  "qa_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "text_encoder_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "text_encoder_baseline_model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "budgets_bytes": [256, 512, 1024, 2048, 4096, 8192],
+  "evaluator_control": {
+    "n_images": 288,
+    "methods": ["visual_latent_memory", "webp", "original_raw_oracle"],
+    "budgets_bytes": [4096, 8192],
+    "primary_comparison": "visual_latent_memory minus webp at 4096 bytes",
+    "qa_source": "frozen GQA/Visual Genome questions"
+  },
+  "text_encoder_control": {
+    "n_images": 144,
+    "selection_seed": 20260820,
+    "selection": "72 images from the count/existence/relational/spatial pattern and 36 from each of the two 72-image patterns, after deterministic seeded shuffle",
+    "methods": ["frozen_qwen25vl_3b_text", "qwen25vl_7b_text"],
+    "qa_source": "same frozen GQA/Visual Genome questions for selected images",
+    "restriction": "Only the text encoder model name changes; prompts, unit parsing, packing, byte budgets, evaluator prompt, questions, and normalization remain fixed."
+  },
+  "inference": {
+    "bootstrap_resamples": 10000,
+    "bootstrap_unit": "image",
+    "paired_method_differences": true
+  }
+}

@@ -16,12 +16,20 @@ __pycache__/
 venv/
 env/
 
-# Local env / secrets
+# Secrets and local configuration
 .env
 .env.*
 *.pem
 *.key
 secrets*.json
+.kaggle/
+kaggle.json
+credentials.json
+
+# Machine-specific execution state
+/.runpod/
+/.vast/
+/.codex/
 
 # Data, models, outputs
 /data/
@@ -34,6 +42,16 @@ secrets*.json
 # Notebook artifacts
 .ipynb_checkpoints/
 
-# Colab / runtime caches
+# Temporary runtime products
 tmp/
 tmpdir/
+/build/
+
+# Logs, caches, and temporary runtime products
+*.log
+*.tmp
+*.temp
+*.cache
+/.cache/
+/logs/
+/cache/

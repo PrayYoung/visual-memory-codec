@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from math import inf
 import re
 
 from visual_memory_benchmark.codecs.base import BaseCodec
@@ -40,13 +41,15 @@ class RealTextCodec(BaseCodec):
         )
         self.max_new_tokens = max_new_tokens
         self.prompt_prefix = prompt_prefix
-        self._unit_cache: dict[str, list[dict[str, str | int]]] = {}
+        self._unit_cache: dict[tuple[str, str], list[dict[str, str | int]]] = {}
 
     def encode(self, sample: SceneSample, budget_bytes: int) -> EncodedArtifact:
-        units = self._unit_cache.get(sample.sample_id)
+        profile = _budget_profile(budget_bytes, self.max_new_tokens)
+        cache_key = (sample.sample_id, profile["name"])
+        units = self._unit_cache.get(cache_key)
         if units is None:
-            units = self._generate_factual_units(sample)
-            self._unit_cache[sample.sample_id] = units
+            units = self._generate_factual_units(sample, profile)
+            self._unit_cache[cache_key] = units
 
         selected_units = _pack_units_for_budget(units, budget_bytes)
         stored_text = _join_units(selected_units)
@@ -59,9 +62,12 @@ class RealTextCodec(BaseCodec):
                 "text": stored_text,
                 "text_sha1": hashlib.sha1(payload).hexdigest(),
                 "statement_count": len(selected_units),
+                "all_statement_count": len(units),
+                "budget_profile": profile["name"],
                 "prompt_echo_flag": prompt_echo_flag,
                 "selected_units": selected_units,
                 "all_extracted_units": units,
+                "qwen_inference": getattr(self.extractor, "last_inference_info", None),
             },
         )
 
@@ -74,18 +80,11 @@ class RealTextCodec(BaseCodec):
         seed = abs(hash(prompt)) % (2**31)
         return self.generator.generate(prompt, image_size=self.image_size, seed=seed)
 
-    def _generate_factual_units(self, sample: SceneSample) -> list[dict[str, str | int]]:
-        prompt = (
-            "Return grounded visual facts from this image, one fact per line, using only these tags: "
-            "[L1] for overall scene, primary subjects, and main action; "
-            "[L2] for counts, major colors or attributes, secondary objects, and major spatial relations; "
-            "[L3] for finer layout, pose or orientation, background details, and additional spatial relations. "
-            "Only output facts. No explanations, no prompt echo, no uncertainty, and no repeated facts."
-        )
+    def _generate_factual_units(self, sample: SceneSample, profile: dict[str, str | int]) -> list[dict[str, str | int]]:
         generated = self.extractor.analyze_image(
             sample.source_path or "",
-            prompt=prompt,
-            max_new_tokens=min(384, self.max_new_tokens * 2),
+            prompt=str(profile["prompt"]),
+            max_new_tokens=int(profile["max_new_tokens"]),
         )
         units: list[dict[str, str | int]] = []
         seen: set[str] = set()
@@ -96,6 +95,53 @@ class RealTextCodec(BaseCodec):
                 seen.add(key)
                 units.append(unit)
         return units
+
+
+def _budget_profile(budget_bytes: int, base_max_new_tokens: int) -> dict[str, str | int]:
+    profiles = [
+        {
+            "name": "compact",
+            "budget_limit": 2048,
+            "max_new_tokens": max(base_max_new_tokens, 192),
+            "prompt": (
+                "Return grounded visual facts from this image, one fact per line, using only these tags: "
+                "[L1] for overall scene, primary subjects, and main action; "
+                "[L2] for counts, major colors or attributes, secondary objects, and major spatial relations. "
+                "Prioritize only the most important scene facts. Keep each fact concise. "
+                "Output at most 12 lines. Only output facts. No explanations, no prompt echo, no uncertainty, and no repeated facts."
+            ),
+        },
+        {
+            "name": "detailed",
+            "budget_limit": 4096,
+            "max_new_tokens": max(base_max_new_tokens * 2, 384),
+            "prompt": (
+                "Return grounded visual facts from this image, one fact per line, using only these tags: "
+                "[L1] for overall scene, primary subjects, and main action; "
+                "[L2] for counts, major colors or attributes, secondary objects, and major spatial relations; "
+                "[L3] for finer layout, pose or orientation, background details, and additional spatial relations. "
+                "Include distinct visually verifiable facts beyond the primary subjects when present. "
+                "Output up to 24 lines. Only output facts. No explanations, no prompt echo, no uncertainty, and no repeated facts."
+            ),
+        },
+        {
+            "name": "exhaustive",
+            "budget_limit": inf,
+            "max_new_tokens": max(base_max_new_tokens * 4, 768),
+            "prompt": (
+                "Return grounded visual facts from this image, one fact per line, using only these tags: "
+                "[L1] for overall scene, primary subjects, and main action; "
+                "[L2] for counts, major colors or attributes, secondary objects, and major spatial relations; "
+                "[L3] for finer layout, pose or orientation, background details, and additional spatial relations. "
+                "Be exhaustive but remain factual and concise. Include secondary objects, relative positions, appearance details, pose, layout, and background facts when visually supported. "
+                "Output up to 48 lines. Only output facts. No explanations, no prompt echo, no uncertainty, and no repeated facts."
+            ),
+        },
+    ]
+    for profile in profiles:
+        if budget_bytes <= profile["budget_limit"]:
+            return profile
+    return profiles[-1]
 
 
 def _extract_grounded_units(text: str, prompt: str | None, level: int | None) -> list[dict[str, str | int]]:

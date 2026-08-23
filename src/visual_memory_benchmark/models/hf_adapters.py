@@ -101,6 +101,14 @@ class Qwen25VlFactExtractor:
         ).to(model.device)
         with torch.no_grad():
             generated_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
+        self.last_inference_info = {
+            "model_name": self.model_name,
+            "cuda_available": torch.cuda.is_available(),
+            "model_device": str(model.device),
+            "input_device": str(inputs.input_ids.device),
+            "generated_ids_device": str(generated_ids.device),
+            "gpu_name": torch.cuda.get_device_name(model.device) if model.device.type == "cuda" else None,
+        }
         generated_ids_trimmed = [
             out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
         ]
@@ -110,6 +118,41 @@ class Qwen25VlFactExtractor:
             clean_up_tokenization_spaces=False,
         )
         return output_text[0].strip()
+
+
+class Qwen25VlMemoryQa:
+    """Frozen evaluator: answers from a stored text payload, decoded image, or both."""
+
+    def __init__(self, model_name: str = "Qwen/Qwen2.5-VL-3B-Instruct") -> None:
+        self.model_name = model_name
+
+    def answer(self, question: str, *, text: str | None = None, image: Image.Image | None = None) -> str:
+        import torch
+
+        if text is None and image is None:
+            raise ValueError("QA needs stored text and/or a decoded image")
+        processor, model = _load_qwen25_vl(self.model_name)
+        instruction = (
+            "Answer the question using only the supplied memory. Reply with only the short answer, "
+            "without explanation. For a count reply with one integer; for yes/no reply yes or no; "
+            "for a left/right question reply left or right. If unsupported, reply unknown.\n"
+            f"Question: {question}"
+        )
+        content = []
+        if image is not None:
+            content.append({"type": "image", "image": image})
+        if text is not None:
+            content.append({"type": "text", "text": f"Stored memory:\n{text}\n\n{instruction}"})
+        else:
+            content.append({"type": "text", "text": instruction})
+        inputs = processor.apply_chat_template(
+            [{"role": "user", "content": content}], add_generation_prompt=True,
+            tokenize=True, return_dict=True, return_tensors="pt",
+        ).to(model.device)
+        with torch.no_grad():
+            generated = model.generate(**inputs, max_new_tokens=8, do_sample=False)
+        trimmed = [out[len(inp):] for inp, out in zip(inputs.input_ids, generated)]
+        return processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
 
 @lru_cache(maxsize=1)

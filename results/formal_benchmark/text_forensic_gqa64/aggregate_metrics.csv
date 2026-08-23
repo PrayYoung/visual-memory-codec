@@ -1,0 +1,4 @@
+budget_bytes,n_images,n_questions,stored_bytes_mean,qa_accuracy_mean,image_bootstrap_ci95_low,image_bootstrap_ci95_high
+256,64,256,219.40625,0.1171875,0.078125,0.15625
+512,64,256,465.5625,0.15625,0.109375,0.203125
+1024,64,256,673.3125,0.1484375,0.10546875,0.1953125

@@ -1,0 +1,17 @@
+{
+  "run_name": "formal_n288_gqa",
+  "dataset": "GQA balanced val v1.2 / scene graphs v1.1 / Visual Genome images",
+  "manifest": "data/gqa/formal_n288_manifest.json",
+  "n_images": 288,
+  "n_questions": 1152,
+  "budgets_bytes": [256, 512, 1024, 2048, 4096, 8192],
+  "qa": "frozen ground-truth GQA/Visual Genome questions; encoder receives no evaluation questions",
+  "functional_groups": {
+    "existence": 216,
+    "count": 216,
+    "attribute": 144,
+    "spatial": 216,
+    "state": 144,
+    "relational_reasoning": 216
+  }
+}

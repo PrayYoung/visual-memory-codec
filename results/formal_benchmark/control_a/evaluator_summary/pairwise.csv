@@ -1,0 +1,5 @@
+budget_bytes,difference_vs_reference,method_name,n_paired_images,paired_image_bootstrap_ci95_high,paired_image_bootstrap_ci95_low,reference_method
+4096,0.078125,original_raw_oracle,288,0.10069444444444445,0.05555555555555555,webp
+4096,0.021701388888888888,visual_latent_memory,288,0.042534722222222224,0.0,webp
+8192,0.04079861111111111,original_raw_oracle,288,0.06163194444444445,0.019097222222222224,webp
+8192,-0.015625,visual_latent_memory,288,0.006076388888888889,-0.036458333333333336,webp

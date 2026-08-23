@@ -210,8 +210,14 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                 artifact_path = method_artifact_dir / f"{sample.sample_id}.bin"
                 reconstruction.save(recon_path)
                 artifact_path.write_bytes(artifact.payload)
+                artifact_file_bytes = artifact_path.stat().st_size
+                if artifact_file_bytes != artifact.stored_bytes:
+                    raise RuntimeError(
+                        f"Stored-byte accounting mismatch for {sample.sample_id}: "
+                        f"artifact={artifact.stored_bytes}, file={artifact_file_bytes}"
+                    )
                 if "text" in artifact.aux:
-                    (method_artifact_dir / f"{sample.sample_id}.txt").write_text(artifact.aux["text"])
+                    (method_artifact_dir / f"{sample.sample_id}.txt").write_text(artifact.aux["text"], encoding="utf-8")
 
                 qa_score, qa_answers = answer_coco_qa(reconstruction, frozen_qa[sample.sample_id], detector)
                 qa_predictions.append({"sample_id": sample.sample_id, "answers": qa_answers})
@@ -222,6 +228,7 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                     "method_name": method.name,
                     "budget_bytes": budget_bytes,
                     "stored_bytes": artifact.stored_bytes,
+                    "artifact_file_bytes": artifact_file_bytes,
                     "budget_utilization": artifact.stored_bytes / budget_bytes,
                     "scene_qa_accuracy": qa_score,
                     "semantic_similarity": metrics["semantic_similarity"],
@@ -236,6 +243,8 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                     row["stored_text"] = artifact.aux["text"]
                     row["payload_sha1"] = artifact.aux.get("text_sha1", hashlib.sha1(artifact.payload).hexdigest())
                     row["statement_count"] = artifact.aux.get("statement_count", 0)
+                    row["all_statement_count"] = artifact.aux.get("all_statement_count", 0)
+                    row["budget_profile"] = artifact.aux.get("budget_profile", "")
                     row["prompt_echo_flag"] = artifact.aux.get("prompt_echo_flag", False)
                     payload_diagnostics.append(
                         {
@@ -247,9 +256,12 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
                             "payload_sha1": row["payload_sha1"],
                             "stored_text": artifact.aux["text"],
                             "statement_count": row["statement_count"],
+                            "all_statement_count": row["all_statement_count"],
+                            "budget_profile": row["budget_profile"],
                             "prompt_echo_flag": row["prompt_echo_flag"],
                             "all_extracted_units": artifact.aux.get("all_extracted_units", []),
                             "selected_units": artifact.aux.get("selected_units", []),
+                            "qwen_inference": artifact.aux.get("qwen_inference"),
                         }
                     )
                 per_scene_rows.append(row)
@@ -331,6 +343,10 @@ def run_natural(config: ExperimentConfig, run_dir: Path) -> None:
             row["prompt_echo_flag"] = False
         if row.get("status") == "ok" and "statement_count" not in row:
             row["statement_count"] = 0
+        if row.get("status") == "ok" and "all_statement_count" not in row:
+            row["all_statement_count"] = 0
+        if row.get("status") == "ok" and "budget_profile" not in row:
+            row["budget_profile"] = ""
 
     example_text_payloads = payload_diagnostics[: min(8, len(payload_diagnostics))]
 

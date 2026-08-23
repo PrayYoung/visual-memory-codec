@@ -1,0 +1,29 @@
+{
+  "dataset": "GQA balanced val v1.2 / scene graphs v1.1 (Visual Genome images)",
+  "group_question_counts": {
+    "attribute": 144,
+    "count": 216,
+    "existence": 216,
+    "relational_reasoning": 216,
+    "spatial": 216,
+    "state": 144
+  },
+  "n_images": 288,
+  "n_questions": 1152,
+  "provenance": {
+    "images": "https://cs.stanford.edu/people/rak248/VG_100K[/_2]/{image_id}.jpg",
+    "questions": "https://downloads.cs.stanford.edu/nlp/data/gqa/questions1.2.zip#val_balanced_questions.json",
+    "scene_graphs": "https://downloads.cs.stanford.edu/nlp/data/gqa/sceneGraphs.zip#val_sceneGraphs.json"
+  },
+  "schema_version": 1,
+  "seed": 20260820,
+  "selection_templates": {
+    "A": 144,
+    "B": 72,
+    "C": 72
+  },
+  "source_sha256": {
+    "questions": "2f675643c0cfffe0485dbae0c0c0dfc16b547443309a98544502bc1ae87c0779",
+    "scene_graphs": "3224baf1e87e56d0faa52a9d62bbd5cd79a6528e15957d0bd886de7f0d6c9a41"
+  }
+}

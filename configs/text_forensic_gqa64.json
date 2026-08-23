@@ -1,0 +1,12 @@
+{
+  "run_name": "text_forensic_gqa64",
+  "parent_manifest": "data/gqa/formal_n288_manifest.json",
+  "parent_manifest_sha256": "2cd66fcc014c97c51cb07e58407f9aa43e8f124bb59224146ed8b745a407f12e",
+  "n_images": 64,
+  "n_questions": 256,
+  "budgets_bytes": [256, 512, 1024],
+  "text_encoder_model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "qa_model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "scoring": "standard VQA normalization; exact single-reference GQA score",
+  "access_policy": "encoder: image only; evaluator: stored text plus evaluation question only; captions, scene graphs, questions, and ground truth never reach encoder; source image never reaches evaluator"
+}

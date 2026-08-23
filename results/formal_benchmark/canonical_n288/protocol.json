@@ -1,0 +1,18 @@
+{
+  "dataset": "GQA balanced val v1.2 / scene graphs v1.1 (Visual Genome images)",
+  "manifest_sha256": "2cd66fcc014c97c51cb07e58407f9aa43e8f124bb59224146ed8b745a407f12e",
+  "qa": "Frozen GQA/Visual Genome ground-truth manifest; evaluator receives only stored text and/or decoded visual memory after encoding.",
+  "bootstrap": {
+    "resamples": 10000,
+    "seed": 20260820,
+    "unit": "image"
+  },
+  "functional_groups": {
+    "attribute": 144,
+    "count": 216,
+    "existence": 216,
+    "relational_reasoning": 216,
+    "spatial": 216,
+    "state": 144
+  }
+}

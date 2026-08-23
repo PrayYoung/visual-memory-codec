@@ -1,0 +1,13 @@
+{
+  "benchmark": "formal_n288",
+  "canonical_manifest_sha256": "2cd66fcc014c97c51cb07e58407f9aa43e8f124bb59224146ed8b745a407f12e",
+  "control": "text_encoder",
+  "qa_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "bootstrap": {
+    "resamples": 10000,
+    "unit": "image",
+    "seed": 20260820
+  },
+  "text_encoder_model": "Qwen/Qwen2.5-VL-7B-Instruct",
+  "restriction": "Existing visual/text baseline artifacts are read only; only qwen25vl_7b_text is newly encoded on the frozen N=144 subset."
+}

@@ -1,0 +1,10 @@
+{
+  "status": "completed",
+  "execution_summary": {
+    "tracked_model_operations": 7776,
+    "new_text_artifacts": 864,
+    "per_scene_rows": 1728,
+    "qa_answers": 6912
+  },
+  "note": "This portable completion record omits machine-specific paths and execution infrastructure details."
+}

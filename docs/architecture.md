@@ -22,7 +22,7 @@ Reason:
 Therefore:
 
 - local CPU remains the control/orchestration path
-- Colab or another remote GPU environment is the intended natural-image execution path
+- A GPU-capable environment is the intended natural-image execution path
 - the repository must remain runnable locally for regression and smoke testing without implying that local CPU results define the scientific benchmark
 
 ## First-version scope

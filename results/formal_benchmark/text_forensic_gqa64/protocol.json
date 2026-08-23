@@ -1,0 +1,16 @@
+{
+  "manifest": "data/gqa/text_forensic_gqa64_manifest.json",
+  "encoder_model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "qa_model": "Qwen/Qwen2.5-VL-3B-Instruct",
+  "budgets": [
+    256,
+    512,
+    1024
+  ],
+  "access_audit": {
+    "encoder": "source image plus fixed factual-extraction prompt only",
+    "evaluator": "stored text plus exact evaluation question/prompt only",
+    "prohibited": "captions, scene graphs, QA questions/answers/annotations at encoding; source image/captions/graphs/annotations at evaluation"
+  },
+  "scoring": "standard VQA-style normalization followed by exact score against single GQA reference"
+}
