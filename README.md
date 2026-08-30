@@ -12,11 +12,13 @@
 
 </div>
 
-Visual Memory Codec asks a concrete systems question: after an image becomes a
-small persistent memory, which representation preserves the information needed
-for downstream visual question answering? The frozen N=288 study compares
-text-only, visual-latent, hybrid, and rate-controlled WebP memories under
-exact per-image byte accounting.
+## The result at a glance
+
+![Teaser diagram: text, visual latent, hybrid, and WebP memories are compared at fixed storage budgets by downstream QA. At 4 KB latent is +0.034 QA over WebP; at 8 KB it plateaus at 3.93 KB while WebP reaches 0.504 QA.](paper_assets/teaser_memory_utility.svg)
+
+*Visual summary. All representations are evaluated by downstream QA under
+stored-byte caps. The stated contrasts and actual rates are taken directly from
+the frozen aggregate and paired-comparison tables.*
 
 > [!TIP]
 > **Key takeaways**
@@ -25,17 +27,11 @@ exact per-image byte accounting.
 >   best able to answer questions about an image under an explicit byte budget.
 > - At the nominal **4 KB** arm, visual latent memory exceeds WebP by **+0.034
 >   scene-QA** (paired 95% CI **[+0.009, +0.059]**) under the canonical evaluator.
-> - The effect is modest and evaluator-sensitive: it is not strict
->   evaluator-robust, and it disappears at 8 KB as the latent memory underfills
->   the cap and plateaus at 3.93 KB.
+> - **Boundary:** the gain is evaluator-sensitive and disappears at 8 KB as the
+>   latent representation plateaus at 3.93 KB.
 
-## The result at a glance
-
-![Teaser diagram: text, visual latent, hybrid, and WebP memories are compared at fixed storage budgets by downstream QA. At 4 KB latent is +0.034 QA over WebP; at 8 KB it plateaus at 3.93 KB while WebP reaches 0.504 QA.](paper_assets/teaser_memory_utility.svg)
-
-*Visual summary. All representations are evaluated by downstream QA under
-stored-byte caps. The stated contrasts and actual rates are taken directly from
-the frozen aggregate and paired-comparison tables.*
+The frozen N=288 study compares text-only, visual-latent, hybrid, and
+rate-controlled WebP memories under exact per-image byte accounting.
 
 <details>
 <summary>Show the full rate–QA figure</summary>
