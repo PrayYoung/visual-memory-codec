@@ -31,6 +31,41 @@ credentials.json
 /.vast/
 /.codex/
 
+# Private research and abandoned execution material
+/AGENTS.md
+/RESEARCH_STATE.json
+/EXPERIMENT_LOG.md
+/KAGGLE_RUNBOOK.md
+/infra/
+/kaggle/
+/notebooks/
+/requirements-colab.txt
+/requirements-kaggle.txt
+/requirements-vast.txt
+/configs/*_vast*.json
+/configs/paper1_pilot_64.json
+/configs/sd_turbo_conditioning_diagnostic.json
+/docs/*prelaunch*.md
+/results/**/engineering_history.json
+/results/formal_benchmark/canonical_n288/functional_group_qa.csv
+/results/formal_benchmark/canonical_n288/infeasible_arms.csv
+/results/formal_benchmark/control_a/evaluator_per_scene_metrics.csv
+/results/formal_benchmark/control_b/text_encoder_per_scene_metrics.csv
+/results/formal_benchmark/provenance/canonical_manifest.json
+/results/formal_benchmark/provenance/provenance.json
+/results/formal_benchmark/provenance/subset_manifest.json
+/results/formal_benchmark/text_forensic_gqa64/forensic_qa_items.jsonl
+/results/formal_benchmark/text_forensic_gqa64/per_scene_metrics.csv
+/scripts/*kaggle*.py
+/scripts/*kaggle*.sh
+/scripts/*vast*.py
+/scripts/*pilot*.py
+/scripts/*tmux*.sh
+/scripts/prepare_robustness_controls.py
+/scripts/sd_turbo_conditioning_diagnostic.py
+/scripts/validate_tmux_execution.sh
+/paper_assets/*.svg
+
 # Data, models, outputs
 /data/
 /outputs/

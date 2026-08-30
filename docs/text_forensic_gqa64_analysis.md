@@ -45,5 +45,4 @@ result remains unchanged.
 - `data/gqa/text_forensic_gqa64_manifest.json`
 - `results/formal_benchmark/provenance/frozen_run_provenance.json`
 - `results/formal_benchmark/text_forensic_gqa64/aggregate_metrics.csv`
-- `results/formal_benchmark/text_forensic_gqa64/forensic_qa_items.jsonl`
 - `results/formal_benchmark/text_forensic_gqa64/protocol.json`

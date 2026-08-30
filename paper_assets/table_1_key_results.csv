@@ -1,0 +1,7 @@
+analysis,comparison,nominal_budget_bytes,n_images,method_a,method_b,method_a_mean_bytes,method_a_qa,method_b_mean_bytes,method_b_qa,difference_method_a_minus_b,ci95_low,ci95_high,interpretation
+canonical,visual latent minus WebP,4096,288,visual_latent_memory,webp,3928,0.503,3452,0.469,0.034,0.009,0.059,positive paired interval
+canonical,visual latent minus WebP,8192,288,visual_latent_memory,webp,3928,0.503,7320,0.504,-0.002,-0.024,0.021,latent underfills and plateau is not distinguishable from WebP
+control_a,visual latent minus WebP,4096,288,visual_latent_memory,webp,3928,0.451,3452,0.429,0.021701,0.000000,0.042535,strict evaluator-robustness rule not met because interval touches zero
+control_a,visual latent minus WebP,8192,288,visual_latent_memory,webp,3928,0.451,7320,0.466,-0.015625,-0.036458,0.006076,no latent advantage under second evaluator
+control_a,raw oracle minus WebP,4096,288,original_raw_oracle,webp,196608,0.507,3452,0.429,0.078125,0.055556,0.100694,evaluator/manifest ceiling context
+control_b,7B text encoder minus frozen 3B encoder,8192,144,qwen25vl_7b_text,frozen_qwen25vl_3b_text,1630,0.229,2250,0.196,0.032986,-0.001736,0.069444,interval includes zero at every cap

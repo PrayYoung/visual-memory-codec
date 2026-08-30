@@ -4,13 +4,12 @@
   "experimental_state": "complete_and_frozen_for_writing",
   "canonical_manifest_sha256": "2cd66fcc014c97c51cb07e58407f9aa43e8f124bb59224146ed8b745a407f12e",
   "completed_components": ["canonical_n288", "text_forensic_gqa64", "evaluator_robustness", "text_encoder_robustness"],
-  "copied_file_sha256": {
+  "release_artifact_sha256": {
     "canonical_n288/aggregate_metrics.csv": "f23c85374acfeac249366f1f06d031444fc50874fcb72f53d758ed110fd29a14",
     "canonical_n288/functional_group_pairwise_vs_webp.csv": "f239dddcfe12044cda993d64629bde3de09cf32aa8ed07fa603068502fc02f86",
     "canonical_n288/per_scene_metrics.csv": "44da0ed3add96ea7d5445f664f0b3e19dacb522d236d46dbce84508b3ebe9e48",
     "control_a/evaluator_summary/pairwise.csv": "8bb38183dbc888a5a0a94ae083744a498ed97e8e792f4aa0ba7018e06b206fd8",
     "control_b/text_encoder_summary/pairwise.csv": "364301d85934d771b24a2e6746ae7154512e6a73eecf96597a27c3818a8bc398",
-    "provenance/canonical_manifest.json": "2cd66fcc014c97c51cb07e58407f9aa43e8f124bb59224146ed8b745a407f12e",
     "text_forensic_gqa64/aggregate_metrics.csv": "96b4312a9de2f072beb3d9cdea279b7466f0cf320ed377ddf046ffa8aa1b6af1"
   },
   "excluded_runtime_content": [
