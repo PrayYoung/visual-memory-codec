@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Paper 1 release figure from frozen, tracked result tables."""
+"""Generate the public release figure from frozen, tracked result tables."""
 from __future__ import annotations
 
 import csv
@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
 INPUT = ROOT / "results" / "formal_benchmark" / "canonical_n288" / "aggregate_metrics.csv"
-OUTPUT = ROOT / "paper_assets" / "figure_1_rate_qa.png"
+PNG_OUTPUT = ROOT / "paper_assets" / "figure_1_rate_qa.png"
+SVG_OUTPUT = ROOT / "paper_assets" / "figure_1_rate_qa.svg"
 
 METHODS = {
     "webp": ("Rate-controlled WebP", "#1f77b4", "o"),
@@ -24,7 +25,7 @@ METHODS = {
     "hybrid_text_visual_latent": ("Hybrid", "#9467bd", "D"),
 }
 
-matplotlib.rcParams["svg.hashsalt"] = "paper1-release"
+matplotlib.rcParams["svg.hashsalt"] = "visual-memory-codec-release"
 
 
 def number(value: str) -> float | None:
@@ -62,7 +63,7 @@ def main() -> None:
     axis.text(8.05, 0.115, "Nominal 8 KB", fontsize=8.5, va="bottom")
     axis.annotate("Latent plateaus at 3.93 KB", (3.928, 0.503), xytext=(4.75, 0.545),
                   arrowprops={"arrowstyle": "-", "color": "#555555"}, fontsize=9)
-    axis.set_title("Paper 1: QA accuracy versus actual stored bytes")
+    axis.set_title("Visual memory utility versus actual stored bytes")
     axis.set_xlabel("Mean stored bytes (KB)")
     axis.set_ylabel("Scene-QA accuracy")
     axis.set_xlim(0, 8.8)
@@ -70,8 +71,9 @@ def main() -> None:
     axis.grid(axis="y", alpha=0.25)
     axis.legend(frameon=False, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.16))
     fig.subplots_adjust(bottom=0.25, top=0.92)
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUTPUT, format="png", dpi=180, bbox_inches="tight")
+    PNG_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(PNG_OUTPUT, format="png", dpi=180, bbox_inches="tight")
+    fig.savefig(SVG_OUTPUT, format="svg", bbox_inches="tight")
 
 
 if __name__ == "__main__":

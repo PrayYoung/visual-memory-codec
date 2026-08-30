@@ -1,4 +1,4 @@
-# Paper 1 frozen results bundle
+# Frozen results bundle
 
 This directory is the tracked, platform-independent record for the formal
 benchmark. It intentionally excludes raw images, reconstruction payloads,
